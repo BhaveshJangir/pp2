@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>For Pranu ❤️</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Short+Stack&family=Homemade+Apple&display=swap'>
+    <style>
+        /* General body styling */
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-size: 1000px;
+            background-image: url("https://www.transparenttextures.com/patterns/cubes.png");
+            background-color: #f498c9;
+            overflow: hidden; /* Prevents scrollbars from appearing when papers are dragged */
+            font-family: 'Short Stack', cursive;
+        }
+
+        /* Styling for the paper elements */
+        .paper {
+            position: absolute;
+            width: 320px;
+            height: 420px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            box-sizing: border-box;
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+            cursor: grab;
+            user-select: none; /* Prevents text selection while dragging */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* When a paper is being actively dragged */
+        .paper.dragging {
+            cursor: grabbing;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            transition: none; /* Disable transition while dragging for smooth movement */
+        }
+
+        /* Specific rotations for initial paper stack layout */
+        .paper:nth-of-type(1) { transform: rotate(-5deg); }
+        .paper:nth-of-type(2) { transform: rotate(3deg); }
+        .paper:nth-of-type(3) { transform: rotate(8deg); }
+        .paper:nth-of-type(4) { transform: rotate(-6deg); }
+        .paper:nth-of-type(5) { transform: rotate(5deg); }
+        .paper:nth-of-type(6) { transform: rotate(-2deg); }
+        .paper:nth-of-type(7) { transform: rotate(0deg); } /* The top-most instruction paper */
+
+
+        /* Image styling within the papers */
+        .paper img {
+            max-width: 100%;
+            max-height: 70%;
+            border-radius: 10px;
+            pointer-events: none; /* Prevents image from interfering with drag events */
+        }
+
+        /* Text styling */
+        p {
+            font-family: 'Homemade Apple', cursive;
+            margin: 0;
+            text-align: center;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .p1 {
+            font-size: 28px;
+        }
+        
+        .p2 {
+            font-size: 22px;
+        }
+        
+        .paper.red {
+            background-color: #ff9e9e;
+        }
+        
+        .paper.red .p1 { color: white; }
+        .paper.red .p2 { color: white; }
+
+        /* Heart shape styling */
+        .paper.heart {
+            background-color: #ff7575;
+            width: 320px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .paper.heart::before,
+        .paper.heart::after {
+            content: '';
+            position: absolute;
+            width: 180px;
+            height: 300px;
+            background: #ff7575;
+            border-radius: 100px 100px 0 0;
+            top: -150px;
+        }
+        .paper.heart::before {
+            left: 70px;
+            transform: rotate(-45deg);
+            transform-origin: 0 100%;
+        }
+        .paper.heart::after {
+            left: -70px;
+            transform: rotate(45deg);
+            transform-origin: 100% 100%;
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .paper {
+                width: 280px;
+                height: 380px;
+            }
+            p {
+                font-size: 20px;
+            }
+            .p1 {
+                font-size: 24px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- The rest of the papers will be stacked underneath -->
+    <div class="paper">
+        <p class="p1">You are Cute &</p>
+        <p class="p1">Amazing <span style="color: red !important;">❤️</span></p>
+    </div>
+
+    <div class="paper red">
+        <p class="p1"> and My Favorite</p>
+        <p class="p2">Person 😍</p>
+    </div>
+
+    <div class="paper image">
+        <p>How can someone be </p>
+        <p> so cute ❤️ </p>
+        <img src="assests/pic.jpeg" alt="Cute photo 1" />
+    </div>
+
+    <!-- <div class="paper image">
+        <p></p>
+        <img src="https://i.ibb.co/YhYJ55T/pranu2.jpg" alt="Cute photo 2" />
+    </div> -->
+
+    <div class="paper red">
+        <p> and I've fallen in</p>
+        <p>Love with You 😍 </p>
+        <!-- <img src="https://i.ibb.co/3sX8N2p/pranu3.jpg" alt="Cute photo 3" /> -->
+    </div>
+    
+    <div class="paper heart">
+    </div>
+
+    <!-- This is the instruction paper, which is now on top -->
+    <div class="paper">
+        <p class="p1">Drag the papers to move!</p>
+    </div>
+
+    <script>
+        // --- Formspree Configuration ---
+        // IMPORTANT: Replace with your actual Formspree endpoint URL
+        const formSpreeEndpoint = 'https://formspree.io/f/meolypkb';
+
+        // --- Paper Dragging Logic ---
+        const papers = Array.from(document.querySelectorAll('.paper'));
+        const draggedPapers = new Set(); // To track which unique papers have been dragged
+
+        let highestZ = 1;
+
+        papers.forEach((paper, index) => {
+            // Assign a unique ID to track each paper
+            paper.id = `paper-${index}`;
+
+            let isDragging = false;
+            let startX, startY, offsetX, offsetY;
+
+            const startDrag = (e) => {
+                isDragging = true;
+                paper.classList.add('dragging');
+
+                // Bring the current paper to the front
+                highestZ += 1;
+                paper.style.zIndex = highestZ;
+
+                // Track that this paper has been moved
+                if (!draggedPapers.has(paper.id)) {
+                    draggedPapers.add(paper.id);
+                }
+                
+                // Determine event type (touch or mouse)
+                const event = e.touches ? e.touches[0] : e;
+                startX = event.clientX;
+                startY = event.clientY;
+                const rect = paper.getBoundingClientRect();
+                offsetX = startX - rect.left;
+                offsetY = startY - rect.top;
+                
+                // Prevent default behavior like text selection
+                e.preventDefault();
+            };
+
+            const drag = (e) => {
+                if (!isDragging) return;
+                
+                const event = e.touches ? e.touches[0] : e;
+                const newX = event.clientX - offsetX;
+                const newY = event.clientY - offsetY;
+                
+                paper.style.left = `${newX}px`;
+                paper.style.top = `${newY}px`;
+            };
+
+            const stopDrag = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                paper.classList.remove('dragging');
+            };
+
+            // Mouse event listeners
+            paper.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+
+            // Touch event listeners
+            paper.addEventListener('touchstart', startDrag);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('touchend', stopDrag);
+        });
+
+        // --- Formspree Data Submission ---
+        const sendDragCountToMail = async () => {
+            const dragCount = draggedPapers.size;
+
+            // Only send if at least one paper has been moved
+            if (dragCount > 0) {
+                const formData = {
+                    name: 'Pranu',
+                    slides_dragged: dragCount,
+                    message: `Pranu dragged ${dragCount} paper(s).`
+                };
+
+                try {
+                    // Using fetch to POST the data to Formspree
+                    await fetch(formSpreeEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData),
+                    });
+                } catch (error) {
+                    // Log error to console if submission fails, but don't alert the user
+                    console.error('Failed to send data to Formspree:', error);
+                }
+            }
+        };
+        
+        // Add an event listener to send the data when the user is about to leave the page
+        window.addEventListener('beforeunload', sendDragCountToMail);
+
+    </script>
+</body>
+</html>
+
